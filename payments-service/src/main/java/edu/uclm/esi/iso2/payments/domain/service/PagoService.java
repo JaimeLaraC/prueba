@@ -4,12 +4,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import edu.uclm.esi.iso2.payments.domain.circuits.model.Circuito;
-import edu.uclm.esi.iso2.payments.domain.circuits.service.CircuitoService;
+import edu.uclm.esi.iso2.circuits.domain.circuits.model.Circuito; // Corrected import
+import edu.uclm.esi.iso2.circuits.domain.circuits.service.CircuitoService; // Corrected import
 import edu.uclm.esi.iso2.payments.domain.payments.model.Pago;
 import edu.uclm.esi.iso2.payments.domain.payments.repository.PagoRepository;
-import edu.uclm.esi.iso2.payments.domain.users.model.Usuario;
-import edu.uclm.esi.iso2.payments.domain.users.service.UsuarioService;
+import edu.uclm.esi.iso2.users.domain.users.model.Usuario; // Corrected import
+import edu.uclm.esi.iso2.users.domain.users.service.UsuarioService; // Corrected import
 import edu.uclm.esi.iso2.payments.exception.ResourceNotFoundException;
 
 import java.time.LocalDateTime;

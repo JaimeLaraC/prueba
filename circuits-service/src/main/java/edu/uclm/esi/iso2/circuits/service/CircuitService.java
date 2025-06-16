@@ -8,8 +8,8 @@ import org.springframework.stereotype.Service;
 
 import edu.uclm.esi.iso2.circuits.domain.circuits.model.Circuito;
 import edu.uclm.esi.iso2.circuits.domain.circuits.service.CircuitoService;
-import edu.uclm.esi.iso2.circuits.domain.users.model.Usuario;
-import edu.uclm.esi.iso2.circuits.domain.users.service.UsuarioService;
+import edu.uclm.esi.iso2.users.domain.users.model.Usuario; // Corrected based on JAR structure
+import edu.uclm.esi.iso2.users.domain.users.service.UsuarioService; // Corrected based on JAR structure
 import edu.uclm.esi.iso2.circuits.exception.ResourceNotFoundException;
 
 @Service

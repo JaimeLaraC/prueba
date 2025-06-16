@@ -75,6 +75,13 @@
             <version>1.18.32</version>
             <scope>provided</scope>
         </dependency>
+
+        <!-- Dependencia del servicio de usuarios -->
+        <dependency>
+            <groupId>edu.uclm.esi.iso2.users</groupId>
+            <artifactId>users-service</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+        </dependency>
     </dependencies>
 
 	<build>
