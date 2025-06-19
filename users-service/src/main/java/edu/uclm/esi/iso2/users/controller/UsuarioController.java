@@ -1,4 +1,4 @@
-package edu.uclm.esi.iso2.users.http;
+package edu.uclm.esi.iso2.users.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

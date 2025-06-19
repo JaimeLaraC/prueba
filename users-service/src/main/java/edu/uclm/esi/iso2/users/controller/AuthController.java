@@ -1,4 +1,4 @@
-package edu.uclm.esi.iso2.users.http;
+package edu.uclm.esi.iso2.users.controller;
 
 import jakarta.validation.Valid;
 

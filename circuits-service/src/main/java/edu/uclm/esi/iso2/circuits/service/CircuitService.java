@@ -1,4 +1,4 @@
-package edu.uclm.esi.iso2.circuits.services;
+package edu.uclm.esi.iso2.circuits.service;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -8,8 +8,7 @@ import org.springframework.stereotype.Service;
 
 import edu.uclm.esi.iso2.circuits.domain.circuits.model.Circuito;
 import edu.uclm.esi.iso2.circuits.domain.circuits.service.CircuitoService;
-import edu.uclm.esi.iso2.users.domain.users.model.Usuario; // Corrected based on JAR structure
-import edu.uclm.esi.iso2.users.domain.users.service.UsuarioService; // Corrected based on JAR structure
+import edu.uclm.esi.iso2.circuits.client.UsersClient;
 import edu.uclm.esi.iso2.circuits.exception.ResourceNotFoundException;
 
 @Service
@@ -19,7 +18,7 @@ public class CircuitService {
     private CircuitoService circuitoService;
 
     @Autowired
-    private UsuarioService usuarioService;
+    private UsersClient usersClient;
 
     public Map<String, Object> createCircuit(int qubits) {
         Map<String, Object> circuit = new HashMap<>();
@@ -100,10 +99,7 @@ public class CircuitService {
 
     public double getUserCredit(Long userId) {
         try {
-            Usuario usuario = usuarioService.getUsuarioById(userId);
-            return usuario.getCredito();
-        } catch (ResourceNotFoundException ex) {
-            throw ex;
+            return usersClient.getUserCredit(userId);
         } catch (Exception e) {
             throw new RuntimeException("Error al obtener crédito del usuario: " + e.getMessage(), e);
         }

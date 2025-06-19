@@ -1,4 +1,4 @@
-package edu.uclm.esi.iso2.circuits.http;
+package edu.uclm.esi.iso2.circuits.controller;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import edu.uclm.esi.iso2.circuits.domain.circuits.service.CircuitoService;
-import edu.uclm.esi.iso2.circuits.services.CircuitService;
+import edu.uclm.esi.iso2.circuits.service.CircuitService;
 
 import org.springframework.beans.factory.annotation.Autowired;
 

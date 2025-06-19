@@ -48,6 +48,29 @@ Asegúrate de tener instalado el siguiente software en tu máquina Windows:
    * Usuario: `users_service_user` (o `sa` si usaste ese)
    * Contraseña: la contraseña definida.
 
+#### Si tienes problemas de conexión con SQL Server (habilitar TCP/IP)
+
+En algunas instalaciones el protocolo **TCP/IP** está deshabilitado por defecto y la aplicación no puede conectar.
+
+1. Abre **SQL Server Configuration Manager**:
+   * Pulsa la tecla Windows y escribe *SQL Server 2022 Configuration Manager* (o la versión que corresponda, p. ej. 2019).
+   * Si no lo encuentras, busca el archivo directamente. Suele estar en una ruta como `C:\Windows\SysWOW64\SQLServerManager16.msc` (el número puede variar según tu versión).
+2. Habilita el protocolo **TCP/IP**:
+   * En el panel izquierdo, despliega **Configuración de red de SQL Server** y selecciona **Protocolos de [TU_INSTANCIA]** (normalmente `SQLEXPRESS` o `MSSQLSERVER`).
+   * En el panel derecho, localiza **TCP/IP**, haz clic derecho y selecciona **Habilitar**. Acepta el mensaje que indica que es necesario reiniciar el servicio.
+3. Verifica que el puerto sea el **1433**:
+   * Haz clic derecho de nuevo en **TCP/IP** → **Propiedades** → pestaña **Direcciones IP**.
+   * Desplázate hasta la sección **IPAll**.
+   * Asegúrate de que el campo **Puerto TCP** diga `1433`. Si el campo **Puertos TCP dinámicos** tiene algún valor, bórralo para que quede vacío.
+4. **Reinicia el servicio** (paso crucial):
+   * En el panel izquierdo, selecciona **Servicios de SQL Server**.
+   * En la derecha, busca el servicio **SQL Server ([TU_INSTANCIA])**.
+   * Haz clic derecho sobre él y selecciona **Reiniciar**.
+
+Después de reiniciar, vuelve a lanzar el servicio `users-service`; la conexión con la base de datos debería funcionar correctamente.
+
+---
+
 ### 2.2. MySQL (para `circuits-service`)
 
 1. **Instalar MySQL:**
@@ -124,6 +147,8 @@ users.service.url=http://localhost:8081/api/users
 
 ### 3.3. `payments-service` (`payments-service/src/main/resources/application.properties`)
 
+> Desde la refactorización de **Stripe**, el servicio **ya no necesita base de datos**.  Debes proporcionar únicamente las siguientes propiedades:
+
 ```properties
 # Puerto del servidor
 server.port=8083
@@ -131,46 +156,85 @@ server.port=8083
 # Secreto JWT Compartido (debe coincidir con users-service) y estar en Base64
 jwt.shared.secret=tuClaveJwtEnBase64LargaYSegura
 
-# URL de Users Service
+# Clave secreta de tu cuenta Stripe (modo prueba o producción)
+stripe.secretKey=sk_test_xxxxxxxxxxxxxxxxxxxxx
+
+# URL de Users Service (para comprobar y descontar crédito)
 users.service.url=http://localhost:8081/api/users
+
+# URL pública de este Payments Service (usada por callbacks REST internos)
+app.payment.service.url=http://localhost:8083/api/pagos
+
+# API-Key interna opcional para asegurar llamadas entre microservicios
+app.payment.service.apikey=tu_api_key_privada
 ```
+
+**Notas:**
+* `stripe.secretKey` debe ser la secreta **Live** o **Test** de tu panel Stripe.
+* Si no deseas usar `app.payment.service.apikey`, elimínala y quita el header `Authorization` del cliente `PaymentServiceClient`.
 
 **Importante:** Sustituye los marcadores (`tu_contraseña_sql_server`, `tu_contraseña_mysql`, `tuClaveJwtEnBase64LargaYSegura`, etc.) por tus credenciales reales. El secreto JWT *debe* ser idéntico en todos los servicios y codificado en Base64 si tu utilería JWT lo requiere.
 
-## 4. Ejecución de los Servicios
+## 4. Compilación rápida
 
-Abre una ventana de PowerShell o símbolo del sistema para cada servicio.
+Antes de ejecutar, puedes compilar e instalar los tres microservicios con el script `compile-services.cmd` desde la raíz del proyecto:
+
+```powershell
+compile-services.cmd
+```
+
+El script recorre cada módulo (`users-service`, `circuits-service`, `payments-service`) y ejecuta:
+
+```cmd
+mvnw.cmd clean install -DskipTests
+```
+
+Deja los JAR generados en cada carpeta `target` y en tu repositorio Maven local.
+
+---
+
+## 5. Ejecución de los Servicios
+
+### Opción rápida: script automático
+
+Ejecuta el script `start-services.cmd` situado en la raíz del proyecto para abrir tres ventanas de consola y arrancar automáticamente `users-service`, `circuits-service` y `payments-service` en los puertos 8081-8083:
+
+```powershell
+start-services.cmd
+```
+
+El script usa Maven Wrapper (`mvnw.cmd spring-boot:run`) por lo que no necesitas tener Maven instalado globalmente.
+
+### Opción manual
+
+Si prefieres lanzarlos tú mismo, abre una ventana de PowerShell o CMD por servicio:
 
 **Para ejecutar `users-service`:**
 
 ```bash
 cd users-service
-java -jar target/users-service-*.jar
-# Ejemplo con propiedades en línea de comandos:
-# java -jar target/users-service-*.jar --server.port=8081 --spring.datasource.password=tuContraseñaReal --jwt.secret=tuSecretoJwt
+.\mvnw.cmd spring-boot:run
 ```
 
 **Para ejecutar `circuits-service`:**
 
 ```bash
 cd circuits-service
-java -jar target/circuits-service-*.jar
-# Ejemplo:
-# java -jar target/circuits-service-*.jar --server.port=8082 --spring.datasource.password=tuContraseñaReal --jwt.shared.secret=tuSecretoJwt
+.\mvnw.cmd spring-boot:run
 ```
 
 **Para ejecutar `payments-service`:**
 
 ```bash
 cd payments-service
-java -jar target/payments-service-*.jar
-# Ejemplo:
-# java -jar target/payments-service-*.jar --server.port=8083 --jwt.shared.secret=tuSecretoJwt
+./mvnw spring-boot:run
 ```
+
+Recuerda que no debes tener otra instancia usando el puerto 8083.  Para reiniciar, para la instancia existente (`Ctrl + C`) antes de volver a lanzar.
 
 Asegúrate de que cada servicio se inicie sin errores. Por defecto escucharán en los puertos 8081, 8082 y 8083 respectivamente.
 
-## 5. Verificación
+## 6. Verificación
 
 * Revisa la salida de la consola de cada servicio para mensajes de inicio satisfactorio (p. ej. "Started …Application in … seconds").
 * Si tienes habilitados *health endpoints* (Spring Boot Actuator), accede a ellos:

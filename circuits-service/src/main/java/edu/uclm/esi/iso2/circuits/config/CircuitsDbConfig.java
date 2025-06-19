@@ -8,7 +8,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @Configuration
 @EnableTransactionManagement
 @EnableJpaRepositories(
-    basePackages = {"edu.uclm.esi.circuits.domain.circuits.repository"}
+    basePackages = {"edu.uclm.esi.iso2.circuits.domain.circuits.repository", "edu.uclm.esi.iso2.users.domain.users.repository"}
 )
 @Primary
 public class CircuitsDbConfig {

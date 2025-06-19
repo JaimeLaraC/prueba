@@ -37,6 +37,10 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
 		</dependency>
 
 		<dependency>
@@ -76,12 +80,7 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- Dependencia del servicio de usuarios -->
-        <dependency>
-            <groupId>edu.uclm.esi.iso2.users</groupId>
-            <artifactId>users-service</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
-        </dependency>
+
     </dependencies>
 
 	<build>
@@ -89,6 +88,9 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <classifier>boot</classifier>
+                </configuration>
 			</plugin>
 		</plugins>
 	</build>

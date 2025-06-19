@@ -1,24 +1,30 @@
 @echo off
-REM Compila los tres microservicios Spring Boot utilizando el wrapper Maven de cada proyecto.
+REM Compila e INSTALA los tres microservicios Spring Boot.
 REM Ejecuta este script desde la raíz del repositorio.
 
-REM Compilar users-service
+REM Compilar e instalar users-service
 cd users-service
-echo Compilando users-service...
-call .\mvnw.cmd clean package -DskipTests
+echo Compilando e instalando users-service...
+call .\mvnw.cmd clean install -DskipTests
 cd ..
 
-REM Compilar circuits-service
+REM Compilar e instalar circuits-service
 cd circuits-service
-echo Compilando circuits-service...
-call .\mvnw.cmd clean package -DskipTests
+echo Compilando e instalando circuits-service...
+call .\mvnw.cmd clean install -DskipTests
 cd ..
 
-REM Compilar payments-service
+REM Compilar e instalar payments-service
 cd payments-service
-echo Compilando payments-service...
-call .\mvnw.cmd clean package -DskipTests
+echo Compilando e instalando payments-service...
+call .\mvnw.cmd clean install -DskipTests
+cd ..
+
+REM Instalar dependencias frontend
+cd frontend
+echo Instalando dependencias frontend...
+call npm.cmd install
 cd ..
 
 echo ---------------------------------------
-echo ¡Compilación finalizada! Los JAR se encuentran en cada carpeta target\.
+echo Compilacion finalizada. Los JAR se encuentran en cada carpeta target y en tu repositorio local de Maven.
