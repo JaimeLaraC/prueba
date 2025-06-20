@@ -1,147 +1,100 @@
 package edu.uclm.esi.iso2.payments.domain.payments.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import edu.uclm.esi.iso2.payments.domain.circuits.model.Circuito;
-import edu.uclm.esi.iso2.payments.domain.circuits.service.CircuitoService;
-import edu.uclm.esi.iso2.payments.domain.payments.model.Pago;
-import edu.uclm.esi.iso2.payments.domain.payments.repository.PagoRepository;
-import edu.uclm.esi.iso2.payments.domain.users.model.Usuario;
-import edu.uclm.esi.iso2.payments.domain.users.service.UsuarioService;
+import com.stripe.Stripe;
+import com.stripe.exception.StripeException;
+import com.stripe.model.PaymentIntent;
+import com.stripe.param.PaymentIntentCreateParams;
+import edu.uclm.esi.iso2.payments.client.CircuitsClient;
+import edu.uclm.esi.iso2.payments.client.UsersClient;
 import edu.uclm.esi.iso2.payments.exception.ResourceNotFoundException;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class PagoService {
 
-    @Autowired
-    private PagoRepository pagoRepository;
+    private final CircuitsClient circuitsClient;
+    private final UsersClient usersClient;
+    private final ConcurrentHashMap<String, Map<String, Object>> pagosMem = new ConcurrentHashMap<>();
 
-    @Autowired
-    private CircuitoService circuitoService;
-
-    @Autowired
-    private UsuarioService usuarioService;
-
-    @Autowired
-    private PaymentServiceClient paymentServiceClient;
-
-    public List<Pago> getAllPagos() {
-        return pagoRepository.findAll();
+    public PagoService(CircuitsClient circuitsClient,
+                       UsersClient usersClient,
+                       @Value("${stripe.secretKey}") String stripeSecretKey) {
+        this.circuitsClient = circuitsClient;
+        this.usersClient = usersClient;
+        Stripe.apiKey = stripeSecretKey;
     }
 
-    public Pago getPagoById(Long id) {
-        return pagoRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Pago no encontrado con id: " + id));
-    }
-
-    public List<Pago> getPagosByUsuarioId(Long usuarioId) {
-        return pagoRepository.findByUsuarioId(usuarioId);
-    }
-
-    public List<Pago> getPagosByCircuitoId(Long circuitoId) {
-        return pagoRepository.findByCircuitoId(circuitoId);
-    }
-
-    @Transactional
+    /**
+     * Crea un PaymentIntent en Stripe y, en modo test, descuenta el crédito inmediatamente.
+     */
     public Map<String, Object> procesarPago(Long usuarioId, Long circuitoId, String metodoPago) {
-        // Verificar que usuario y circuito existan
-        Usuario usuario = usuarioService.getUsuarioById(usuarioId);
-        Circuito circuito = circuitoService.getCircuitoById(circuitoId);
+        var usuario = usersClient.getUsuarioById(usuarioId);
+        var circuito = circuitsClient.getCircuitoById(circuitoId);
+        double coste = Double.parseDouble(circuito.get("coste").toString());
 
-        // Verificar crédito disponible
-        if (!usuarioService.comprobarCredito(usuarioId, circuito.getCoste())) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("message", "Crédito insuficiente para realizar el pago");
-            return response;
+        // comprobar crédito
+        if (!usersClient.comprobarCredito(usuarioId, coste)) {
+            return Map.of("success", false, "message", "Crédito insuficiente");
         }
 
-        // Crear registro de pago
-        Pago pago = new Pago();
-        pago.setUsuarioId(usuarioId);
-        pago.setCircuitoId(circuitoId);
-        pago.setMonto(circuito.getCoste());
-        pago.setReferenciaPago(UUID.randomUUID().toString());
-        pago.setFechaPago(LocalDateTime.now());
-        pago.setEstado("PENDIENTE");
-        pago.setMetodoPago(metodoPago);
+        long amountCents = Math.round(coste * 100);
+        String referencia = UUID.randomUUID().toString();
 
-        pagoRepository.save(pago);
+        try {
+            PaymentIntentCreateParams params = PaymentIntentCreateParams.builder()
+                    .setAmount(amountCents)
+                    .setCurrency("eur")
+                    .setDescription("Pago circuito " + circuitoId)
+                    .putMetadata("referencia", referencia)
+                    .setAutomaticPaymentMethods(PaymentIntentCreateParams.AutomaticPaymentMethods.builder().setEnabled(true).build())
+                    .build();
 
-        // Preparar datos para el servicio de pago externo
-        Map<String, Object> datosPago = new HashMap<>();
-        datosPago.put("referenciaPago", pago.getReferenciaPago());
-        datosPago.put("monto", pago.getMonto());
-        datosPago.put("metodoPago", metodoPago);
-        datosPago.put("usuarioId", usuarioId);
-        datosPago.put("usuarioEmail", usuario.getEmail());
+            PaymentIntent intent = PaymentIntent.create(params);
 
-        // Llamar al servicio de pago externo
-        Map<String, Object> resultadoPago = paymentServiceClient.procesarPago(datosPago);
+            if ("succeeded".equals(intent.getStatus())) {
+                double nuevoCredito = Double.parseDouble(usuario.get("credito").toString()) - coste;
+                usersClient.actualizarCredito(usuarioId, nuevoCredito);
+            }
 
-        // Actualizar estado del pago según la respuesta
-        if (resultadoPago.get("success") != null && (Boolean) resultadoPago.get("success")) {
-            pago.setEstado("COMPLETADO");
+            Map<String, Object> info = Map.of(
+                    "referencia", referencia,
+                    "usuarioId", usuarioId,
+                    "circuitoId", circuitoId,
+                    "monto", coste,
+                    "estado", intent.getStatus(),
+                    "stripeId", intent.getId(),
+                    "fecha", LocalDateTime.now().toString()
+            );
+            pagosMem.put(referencia, info);
 
-            // Actualizar crédito del usuario
-            double nuevoCredito = usuario.getCredito() - circuito.getCoste();
-            usuarioService.actualizarCredito(usuarioId, nuevoCredito);
-
-            pagoRepository.save(pago);
-
-            resultadoPago.put("pagoId", pago.getId());
-        } else {
-            pago.setEstado("FALLIDO");
-            pagoRepository.save(pago);
+            return Map.of(
+                    "success", true,
+                    "estado", intent.getStatus(),
+                    "referencia", referencia,
+                    "clientSecret", intent.getClientSecret()
+            );
+        } catch (StripeException e) {
+            return Map.of("success", false, "message", "Stripe error: " + e.getMessage());
         }
-
-        return resultadoPago;
     }
 
-    @Transactional
-    public Map<String, Object> verificarEstadoPago(String referenciaPago) {
-        Pago pago = pagoRepository.findByReferenciaPago(referenciaPago)
-                .orElseThrow(() -> new ResourceNotFoundException("Pago no encontrado con referencia: " + referenciaPago));
-
-        // Si el pago ya está completado o fallido, devolver el estado actual
-        if ("COMPLETADO".equals(pago.getEstado()) || "FALLIDO".equals(pago.getEstado())) {
-            Map<String, Object> resultado = new HashMap<>();
-            resultado.put("success", "COMPLETADO".equals(pago.getEstado()));
-            resultado.put("estado", pago.getEstado());
-            resultado.put("fechaPago", pago.getFechaPago());
-            resultado.put("referenciaPago", pago.getReferenciaPago());
-            return resultado;
+    public Map<String, Object> verificarEstadoPago(String referencia) {
+        Map<String, Object> pago = pagosMem.get(referencia);
+        if (pago == null) {
+            throw new ResourceNotFoundException("Pago no encontrado: " + referencia);
         }
-
-        // Si está pendiente, verificar con el servicio externo
-        Map<String, Object> estadoPago = paymentServiceClient.verificarPago(referenciaPago);
-
-        // Actualizar estado según la respuesta
-        if (estadoPago.get("success") != null && (Boolean) estadoPago.get("success")) {
-            if (estadoPago.get("estado") != null) {
-                pago.setEstado((String) estadoPago.get("estado"));
-
-                // Si el pago se completa, actualizar crédito del usuario
-                if ("COMPLETADO".equals(pago.getEstado())) {
-                    Usuario usuario = usuarioService.getUsuarioById(pago.getUsuarioId());
-                    Circuito circuito = circuitoService.getCircuitoById(pago.getCircuitoId());
-
-                    double nuevoCredito = usuario.getCredito() - circuito.getCoste();
-                    usuarioService.actualizarCredito(pago.getUsuarioId(), nuevoCredito);
-                }
-
-                pagoRepository.save(pago);
-            }
+        try {
+            PaymentIntent intent = PaymentIntent.retrieve(pago.get("stripeId").toString());
+            pago.put("estado", intent.getStatus());
+            return Map.of("success", true, "estado", intent.getStatus(), "referencia", referencia);
+        } catch (StripeException e) {
+            return Map.of("success", false, "message", "Error Stripe: " + e.getMessage());
         }
-
-        return estadoPago;
     }
 }

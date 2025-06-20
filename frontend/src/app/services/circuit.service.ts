@@ -20,7 +20,7 @@ export class CircuitService {
     return this.http.get<any>(`${API_URL}retrieveCircuit/${id}`);
   }
 
-  // getUserCredit(userId: number): Observable<any> {
-    // return this.http.get<any>(`${API_URL}getUserCredit/${userId}`);
+  getUserCredit(userId: number): Observable<number> {
+    return this.http.get<number>(`${API_URL}user/${userId}/credit`);
   }
 }
