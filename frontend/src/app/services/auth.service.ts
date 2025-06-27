@@ -29,13 +29,13 @@ export class AuthService {
     console.log('Iniciando sesión en URL: ' + AUTH_API + 'login');
     
     // SOLUCIÓN TEMPORAL: Para entrar como administrador en la aplicación
-    if (credentials.email === 'admin@example.com' && credentials.password === 'admin123') {
+    if (credentials.email === 'admin@gmail.com' && credentials.password === 'admin123') {
       console.log('Accediendo como administrador');
       const mockResponse: JwtResponse = {
         token: 'mock-jwt-token',
         type: 'Bearer',
         id: 1,
-        email: 'admin@example.com',
+        email: 'admin@gmail.com',
         nombre: 'Admin',
         apellido: 'User',
         credito: 1000
