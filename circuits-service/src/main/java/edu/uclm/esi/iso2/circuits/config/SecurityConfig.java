@@ -51,7 +51,9 @@ public class SecurityConfig {
         // Assuming the jwtSharedSecret is Base64 encoded, as it was in users-service JwtUtils
         byte[] keyBytes = Base64.getDecoder().decode(jwtSharedSecret);
         SecretKey key = new SecretKeySpec(keyBytes, 0, keyBytes.length, "HmacSHA512");
-        return NimbusJwtDecoder.withSecretKey(key).build();
+        return NimbusJwtDecoder.withSecretKey(key)
+                .macAlgorithm(org.springframework.security.oauth2.jose.jws.MacAlgorithm.HS512)
+                .build();
     }
 
     @Bean
