@@ -1,4 +1,4 @@
-package edu.uclm.esi.iso2.users.domain.users.service;
+package edu.uclm.esi.iso2.users.domain.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.SimpleMailMessage;
@@ -35,7 +35,7 @@ public class EmailService {
         mensaje.setTo(emailDestinatario);
         mensaje.setSubject("Recuperación de contraseña");
         mensaje.setText("Para recuperar tu contraseña, haz clic en el siguiente enlace: "
-                + "http://localhost:8080/api/usuarios/reset-password?token=" + token);
+                + "http://localhost:4200/reset-password/" + token);
 
         mailSender.send(mensaje);
     }

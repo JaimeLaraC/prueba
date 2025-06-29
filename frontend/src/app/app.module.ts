@@ -17,6 +17,8 @@ import { ProfileComponent } from './components/user/profile/profile.component';
 
 import { AuthInterceptor } from './interceptors/auth.interceptor';
 import { AppRoutingModule } from './app-routing.module';
+import { ForgotPasswordComponent } from './components/user/forgot-password/forgot-password.component';
+import { ResetPasswordComponent } from './components/user/reset-password/reset-password.component';
 
 
 @NgModule({
@@ -31,6 +33,8 @@ import { AppRoutingModule } from './app-routing.module';
     LoginComponent,
     PaymentComponent,
     ProfileComponent,
+    ForgotPasswordComponent,
+    ResetPasswordComponent,
 
   ],
   imports: [

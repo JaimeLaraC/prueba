@@ -11,7 +11,7 @@ set "MVN=%MAVEN_HOME%\bin\mvn.cmd"
 REM -----------------------------------------------------
 
 REM Users-service en puerto 8081
-start "users" cmd /k "cd users-service && "%MVN%" spring-boot:run"
+start "users" cmd /k "cd users-service\target && java -jar users-service-0.0.1-SNAPSHOT.jar"
 
 REM Circuits-service en puerto 8082
 start "circuits" cmd /k "cd circuits-service && "%MVN%" spring-boot:run"

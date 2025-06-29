@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, of, BehaviorSubject } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
-import { User, LoginRequest, JwtResponse } from '../models/user.model';
+import { User, LoginRequest, JwtResponse, ResetPasswordRequest } from '../models/user.model';
 
 const AUTH_API = environment.usersApiUrl + '/auth/';
 const TOKEN_KEY = 'auth-token';
@@ -116,5 +116,13 @@ export class AuthService {
   
   isLoggedIn(): boolean {
     return this.isLoggedInCheck();
+  }
+
+  forgotPassword(email: string): Observable<any> {
+    return this.http.post(AUTH_API + 'forgot-password', { email }, httpOptions);
+  }
+
+  resetPassword(data: ResetPasswordRequest): Observable<any> {
+    return this.http.post(AUTH_API + 'reset-password', data, httpOptions);
   }
 }
